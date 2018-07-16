@@ -103,9 +103,7 @@ class TranzzoHandler extends PaySystem\ServiceHandler
         if(empty($data) && empty($signature)) die('LOL! Bad Request!!!');
 
         $data_response = \Tranzzo\Api\Payment::parseDataResponse($data);
-        $order_id = (int)$data_response[\Tranzzo\Api\Payment::P_RES_ORDER];
-
-//        \Tranzzo\Api\Payment::writeLog($data_response, 'data response', 'callback');
+        $order_id = (int)$data_response[\Tranzzo\Api\Payment::P_RES_PROV_ORDER];
 
         $config = $this->getSettingsModule();
         $tranzzo = new \Tranzzo\Api\Payment(
@@ -122,7 +120,7 @@ class TranzzoHandler extends PaySystem\ServiceHandler
             $amount_payment = \Tranzzo\Api\Payment::amountToDouble($data_response[\Tranzzo\Api\Payment::P_RES_AMOUNT]);
             $amount_order = \Tranzzo\Api\Payment::amountToDouble($order->getField('PRICE'));
 
-            if ($data_response[\Tranzzo\Api\Payment::P_RES_RESP_CODE] == 1000 && ($amount_payment == $amount_order)) {
+            if ($data_response[\Tranzzo\Api\Payment::P_RES_RESP_CODE] == 1000 && ($amount_payment >= $amount_order)) {
                     $fields = array(
                         "PS_STATUS" => "Y",
                         "PS_STATUS_CODE" => $data_response[\Tranzzo\Api\Payment::P_RES_RESP_CODE],
@@ -136,8 +134,6 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
 //                    $order->setField('STATUS_ID', 'P');
 //                    $order->save();
-
-//                    \Tranzzo\Api\Payment::writeLog($fields, 'fields', 'callback');
 
                     $result->setPsData($fields);
                     $result->setOperationType(PaySystem\ServiceResult::MONEY_COMING);
@@ -157,8 +153,6 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 //                    $order->setField('STATUS_ID', 'N');
 //                    $order->save();
 
-//                \Tranzzo\Api\Payment::writeLog($fields, 'fields no payment', 'callback');
-
                 $result->setPsData($fields);
                 $result->setOperationType(PaySystem\ServiceResult::MONEY_LEAVING);
             }
@@ -171,8 +165,6 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
     public static function isMyResponse(Request $request, $paySystemId)
     {
-//        \Tranzzo\Api\Payment::writeLog($request->toArray(), 'callback', 'callback');
-
         $data_response = \Tranzzo\Api\Payment::parseDataResponse($request->get('data'));
         $signature = $request->get('signature');
         if (!empty($data_response) && !empty($signature))

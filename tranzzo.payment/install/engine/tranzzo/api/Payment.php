@@ -37,6 +37,7 @@ class Payment
     const P_REQ_SANDBOX     = 'sandbox';
 
     //Response params
+    const P_RES_PROV_ORDER  = 'provider_order_id';
     const P_RES_PAYMENT_ID  = 'payment_id';
     const P_RES_TRSACT_ID   = 'transaction_id';
     const P_RES_STATUS      = 'status';
@@ -193,6 +194,9 @@ class Payment
         $this->params[self::P_OPT_PAYLOAD] = $value;
     }
 
+    /**
+     * @return array
+     */
     public function getReqParams()
     {
         return $this->params;
@@ -248,10 +252,9 @@ class Payment
         $params = is_null($params)? $this->params : $params;
         $data   = json_encode($params);
 
-        self::writeLog($url, '', '', 0);
         if(json_last_error()) {
-            self::writeLog(json_last_error(), 'json_last_error');
-            self::writeLog(json_last_error_msg(), 'json_last_error_msg');
+            self::writeLog(json_last_error(), 'json_last_error', 'error');
+            self::writeLog(json_last_error_msg(), 'json_last_error_msg', 'error');
         }
 
         $this->setHeader('X-API-Auth: CPAY '.$this->apiKey.':'.$this->apiSecret);
@@ -276,11 +279,13 @@ class Payment
         $errno = curl_errno($ch);
         curl_close($ch);
 
-        self::writeLog(array('headers' => $this->headers));
-        self::writeLog(array('params' => $params));
-
-        self::writeLog(array("httpcode" => $http_code, "errno" => $errno));
-        self::writeLog('response', $server_response);
+        // for check request
+//        self::writeLog($url, '', '', 0);
+//        self::writeLog(array('headers' => $this->headers));
+//        self::writeLog(array('params' => $params));
+//
+//        self::writeLog(array("httpcode" => $http_code, "errno" => $errno));
+//        self::writeLog('response', $server_response);
 
         if(!$errno && empty($server_response))
             return $http_code;
@@ -342,6 +347,10 @@ class Payment
         return base64_decode(strtr($data, '-_', '+/'));
     }
 
+    /**
+     * @param $data
+     * @return mixed
+     */
     public static function parseDataResponse($data)
     {
         return json_decode(self::base64url_decode($data), true);
@@ -375,10 +384,15 @@ class Payment
         return is_null($round)? round($val, 2) : round($value, (int)$round);
     }
 
+    /**
+     * @param $data
+     * @param string $flag
+     * @param string $filename
+     * @param bool|true $append
+     */
     static function writeLog($data, $flag = '', $filename = '', $append = true)
     {
         $filename = !empty($filename)? strval($filename) : basename(__FILE__);
-
         file_put_contents(__DIR__ . "/{$filename}.log", "\n\n" . date('H:i:s') . " - $flag \n" .
             (is_array($data)? json_encode($data, JSON_PRETTY_PRINT):$data)
             , ($append? FILE_APPEND : 0)
