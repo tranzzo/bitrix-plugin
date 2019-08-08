@@ -18,38 +18,50 @@ Loc::loadMessages(__FILE__);
 $aTabs = array(
     array(
         "DIV" 	  => "edit",
-        "TAB" 	  => Loc::getMessage("tranzzo.tab_settings"),
-//        "TITLE"   => Loc::getMessage("tranzzo.tab_settings"),
+        "TAB" 	  => Loc::getMessage("TRANZZO.tab_settings"),
+//        "TITLE"   => Loc::getMessage("TRANZZO.tab_settings"),
     )
 );
 
-$OPTIONS = array(
-    Loc::getMessage("tranzzo.settings"),
-    array(
+$OPTIONS = [
+    Loc::getMessage("TRANZZO.settings"),
+    [
         "POS_ID",
-        Loc::getMessage("tranzzo.POS_ID"),
+        Loc::getMessage("TRANZZO.POS_ID"),
         Option::get($MODULE_ID, 'POS_ID'),
-        array("text", 100)
-    ),
-    array(
+        ["text", 100]
+    ],
+    [
         "API_KEY",
-        Loc::getMessage("tranzzo.API_KEY"),
+        Loc::getMessage("TRANZZO.API_KEY"),
         Option::get($MODULE_ID, 'API_KEY'),
-        array("password", 100)
-    ),
-    array(
+        ["password", 100]
+    ],
+    [
         "API_SECRET",
-        Loc::getMessage("tranzzo.API_SECRET"),
+        Loc::getMessage("TRANZZO.API_SECRET"),
         Option::get($MODULE_ID, 'API_SECRET'),
-        array("password", 100)
-    ),
-    array(
+        ["password", 100]
+    ],
+    [
         "ENDPOINTS_KEY",
-        Loc::getMessage("tranzzo.ENDPOINTS_KEY"),
+        Loc::getMessage("TRANZZO.ENDPOINTS_KEY"),
         Option::get($MODULE_ID, 'ENDPOINTS_KEY'),
-        array("password", 100)
-    ),
-);
+        ["password", 100]
+    ],
+    [
+        "PAYMENT_ACTION",
+        Loc::getMessage("TRANZZO.PAYMENT_ACTION"),
+        Option::get($MODULE_ID, 'PAYMENT_ACTION'),
+        [
+            "selectbox",
+            [
+                Tranzzo\Api\Payment::P_METHOD_PURCHASE => Loc::getMessage('TRANZZO.ACTION_PURCHASE'),
+                Tranzzo\Api\Payment::P_METHOD_AUTH => Loc::getMessage('TRANZZO.ACTION_AUTH'),
+            ]
+        ]
+    ],
+];
 
 
 if($request->isPost() && check_bitrix_sessid()){

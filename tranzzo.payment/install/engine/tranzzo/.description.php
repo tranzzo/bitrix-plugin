@@ -18,6 +18,14 @@ $data = array(
                 'PROVIDER_VALUE' => 'ID'
             )
         ),
+        'PAYMENT_ID' => array(
+            'SORT' => 110,
+            'NAME' => Loc::getMessage('TRANZZO_PAYMENT_ID'),
+            'DEFAULT' => array(
+                'PROVIDER_KEY' => 'PAYMENT',
+                'PROVIDER_VALUE' => 'ID'
+            )
+        ),
         'AMOUNT' => array(
             'SORT' => 111,
             'NAME' => Loc::getMessage('TRANZZO_AMOUNT'),

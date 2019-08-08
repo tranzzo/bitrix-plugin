@@ -2,6 +2,9 @@
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
+use Bitrix\Main\EventManager;
+use Bitrix\Main\Application;
+use Bitrix\Sale;
 
 Loc::loadMessages(__FILE__);
 
@@ -16,8 +19,8 @@ class tranzzo_payment extends CModule{
         $this->MODULE_NAME = 'TRANZZO';
         $this->MODULE_DESCRIPTION = Loc::getMessage( 'USER_PM_MODULE_DESC' );
         $this->MODULE_VERSION = $arModuleVersion['VERSION'];
-        $this->MODULE_VERSION_DATE   = $arModuleVersion['VERSION_DATE'];
-        $this->MODULE_GROUP_RIGHTS   = 'N';
+        $this->MODULE_VERSION_DATE = $arModuleVersion['VERSION_DATE'];
+        $this->MODULE_GROUP_RIGHTS = 'N';
     }
 
     public function DoInstall()
@@ -40,14 +43,14 @@ class tranzzo_payment extends CModule{
  
     public function InstallFiles()
     {
-        CopyDirFiles( __DIR__ . "/engine/", $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/sale/handlers/paysystem", true, true);
+        CopyDirFiles( __DIR__ . '/engine/', Application::getDocumentRoot() . '/bitrix/modules/sale/handlers/paysystem', true, true);
 
         return true;
     }
  
     public function UnInstallFiles()
     {
-        DeleteDirFilesEx("/bitrix/modules/sale/handlers/paysystem/tranzzo");
+        DeleteDirFilesEx('/bitrix/modules/sale/handlers/paysystem/tranzzo');
 
         return true;
     }
@@ -55,6 +58,25 @@ class tranzzo_payment extends CModule{
     function InstallDB($arParams = array())
     {
         global $DB, $APPLICATION;
+
+        $dataStatus = [
+            'ID' => 'HL',
+            'LANG' => [
+                [
+                    'LID' => 'ru',
+                    'NAME' => Loc::getMessage('TRANZZO.statusHold', null, 'ru'),
+                    'DESCRIPTION' => '',
+                ],
+                [
+                    'LID' => 'en',
+                    'NAME' => 'Invoice Hold',
+                    'DESCRIPTION' => '',
+                ],
+            ],
+            'NOTIFY' => 'N',
+        ];
+        Main\Loader::includeModule('sale');
+        Sale\OrderStatus::install($dataStatus);
 
         return true;
     }
@@ -68,11 +90,33 @@ class tranzzo_payment extends CModule{
 
     public function InstallEvents()
     {
+//        RegisterModuleDependences('sale', 'OnSaleOrderSaved', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderChanged');
+
+        EventManager::getInstance()
+            ->registerEventHandler('sale', 'OnSaleOrderSaved', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderChanged');
+
+        EventManager::getInstance()
+            ->registerEventHandler('sale', 'OnSaleOrderPaid', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderPaid');
+
+        EventManager::getInstance()
+            ->registerEventHandler('main', 'OnAdminContextMenuShow', $this->MODULE_ID, 'ListenerTranzzoPayment', 'OnAdminContextMenuShowHandler');
+
         return true;
     }
 
     public function UnInstallEvents()
     {
+//        UnRegisterModuleDependences('sale', 'OnSaleOrderSaved', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderChanged');
+
+        EventManager::getInstance()
+            ->unRegisterEventHandler('sale', 'OnSaleOrderSaved', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderChanged' );
+
+        EventManager::getInstance()
+            ->unRegisterEventHandler('sale', 'OnSaleOrderPaid', $this->MODULE_ID, 'ListenerTranzzoPayment', 'orderPaid' );
+
+        EventManager::getInstance()
+            ->unRegisterEventHandler('main', 'OnAdminContextMenuShow', $this->MODULE_ID, 'ListenerTranzzoPayment', 'OnAdminContextMenuShowHandler');
+
         return true;
     }
 }

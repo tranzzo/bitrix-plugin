@@ -7,6 +7,11 @@ Loc::loadLanguageFile(__FILE__);
 $MODULE_ID = "tranzzo.payment";
 CModule::AddAutoloadClasses(
 	$MODULE_ID,
-	array(	)
+	array(
+			'ListenerTranzzoPayment' => 'classes/general/listener.php',
+			'\Tranzzo\Api\Payment' => 'lib/api/Payment.php',
+			'\Tranzzo\Api\InfoProduct' => 'lib/api/InfoProduct.php',
+			'\Tranzzo\Api\ResponseParams' => 'lib/api/ResponseParams.php',
+	)
 );
 ?>
