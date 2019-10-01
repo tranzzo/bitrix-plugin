@@ -1,4 +1,5 @@
 <?php
+
 use Bitrix\Main;
 use Bitrix\Sale;
 use Bitrix\Main\Type\Date;
@@ -22,72 +23,40 @@ class ListenerTranzzoPayment
 //            json_encode($result, JSON_PRETTY_PRINT), FILE_APPEND);
     }
 
-    public static function orderPaid($event) //event OnSaleOrderPaid \Bitrix\Sale\Payment
+    public static function orderPaid($event)
     {
         $order = $event->getParameter("ENTITY");
 
         if($order instanceof Bitrix\Sale\Order) {
-
-//        $data = get_object_vars($event);
-//        $data = get_class_methods($event);
-
-//        $data['event'] = get_class_methods($event);
-//        $data['get_class_methods'] = get_class_methods($payment);
-//        $data['get_object_vars'] = get_object_vars($payment);
-//        $data['getAllFields'] = $payment->getAllFields();
-//        $data['loadPaymentCollection'] = $payment->loadPaymentCollection();
-//        $data['getPaymentCollection'] = $payment->getPaymentCollection();
-
-//        $pay = \Bitrix\Sale\Payment::getList(array('select' => array('ORDER_ID' => (int)$payment->getId())));
-//        $data['pay'] = $pay;
-
             $order_id = (int)$order->getId();
-
 
             $paymentId = intval($_POST['paymentId']);
             $payments = $order->getPaymentCollection();
             $payment = self::getInvoiceFromId($paymentId, $payments);
 
-//            $payRow = \Bitrix\Sale\Payment::getList(array('filter' => array('ORDER_ID' => $order_id)));
             $payRow = \Bitrix\Sale\Payment::getList(array('filter' => array('ID' => $paymentId)));
             $dataPayOrder = $payRow->fetch();
-
-//            PayTranzzo::writeLog([
-//                'getAllFields' => $payment->getAllFields(),
-//                'get_object_vars' => get_object_vars($payment),
-//                'get_class_methods' => get_class_methods($payment),
-//            ], '', 'log_OnSaleOrderPaid');
-
-
-//            $PAID = $payment->getField('PAID');
-//            $PAY_SYSTEM_NAME = $payment->getField('PAY_SYSTEM_NAME');
-//            $PS_INVOICE_ID = $payment->getField('PS_INVOICE_ID');
-//            $IS_RETURN = $payment->getField('IS_RETURN');
 
             $PAID = $dataPayOrder['PAID'];
             $PAY_SYSTEM_NAME = $dataPayOrder['PAY_SYSTEM_NAME'];
             $PS_INVOICE_ID = $dataPayOrder['PS_INVOICE_ID'];
             $IS_RETURN = $dataPayOrder['IS_RETURN'];
 
-//            PayTranzzo::writeLog([
-//                '$PAID' => $PAID,
-//                '$PAY_SYSTEM_NAME' => $PAY_SYSTEM_NAME,
-//                '$PS_INVOICE_ID' => $PS_INVOICE_ID,
-//                '$IS_RETURN' => $IS_RETURN,
-//            ], '', 'log_paid', 0);
-//            if (0) {
-
             if ($PAY_SYSTEM_NAME == self::MODULE_NAME && $PAID == 'N' && $IS_RETURN != 'Y' && !empty($PS_INVOICE_ID)) {
 
-                $tranzzo = self::getApiTranzzo();
+                //new
+                $paymentSys = $order->getPaymentSystemId();
+                $tranzzo=self::getApiTranzzo($paymentSys[0]);
+                //new
 
                 $tranzzo->setOrderId($PS_INVOICE_ID);
                 $tranzzo->setOrderCurrency($payment->getField('PS_CURRENCY'));
                 $tranzzo->setOrderAmount($payment->getField('PS_SUM'));
 
-//                $scheme = \Cmain::isHTTPS()? 'https' : 'http';
-//                $tranzzo->setServerUrl("{$scheme}://{$_SERVER['HTTP_HOST']}/bitrix/tools/sale_ps_result.php?refund");
 
+                PayTranzzo::writeLog(['$tranzzo' => $tranzzo], '', 'after');
+
+                //new
                 $result = $tranzzo->createRefund();
 
                 $response = new ApiTranzzo\ResponseParams($result);
@@ -126,18 +95,16 @@ class ListenerTranzzoPayment
             $orderInfo = Sale\Order::load($orderId);
 
             if($orderInfo instanceof Sale\Order) {
-                //var_dump($orderInfo->getField('PAY_SYSTEM'));
-//                var_dump($orderInfo->getAllFields());
-
-//                var_dump(self::getSettingsModule('ENDPOINTS_KEY'));
-
-                //var_dump($paySysId = $orderInfo->getPaymentSystemId());
                 $payments = $orderInfo->getPaymentCollection();
 
                 if(isset($_GET["tranzzo_action"])) {
-                    $tranzzo = self::getApiTranzzo();
                     $paymentId = intval($_GET['tranzzo_payment']);
                     $payment = self::getInvoiceFromId($paymentId, $payments);
+
+                    //new
+                    $paymentSys = $orderInfo->getPaymentSystemId();
+                    $tranzzo=self::getApiTranzzo($paymentSys[0]);
+                    //new
 
                     $tranzzo->setOrderId($payment->getField('PS_INVOICE_ID'));
                     $tranzzo->setOrderCurrency($payment->getField('PS_CURRENCY'));
@@ -178,9 +145,8 @@ class ListenerTranzzoPayment
                         unset($_GET['tranzzo_action'], $_GET['tranzzo_payment']);
                         header('Location: ' . $GLOBALS['APPLICATION']->GetCurPageParam());
                         exit;
-                    } elseif ($_GET["tranzzo_action"] == 'capture') {
-//                        $tranzzo->setServerUrl();
-
+                    }
+                    elseif ($_GET["tranzzo_action"] == 'capture') {
                         $result = $tranzzo->createCapture();
 
                         PayTranzzo::writeLog($result, '', 'after_capture.log');
@@ -216,7 +182,6 @@ class ListenerTranzzoPayment
                     }
                 }
 
-//                var_dump($payments);
                 foreach ($payments as $payment) {
                     $paymentName = $payment->getField('PAY_SYSTEM_NAME');
                     if($paymentName == self::MODULE_NAME) {
@@ -230,28 +195,6 @@ class ListenerTranzzoPayment
                         }
                     }
                 }
-
-
-//            var_dump(Sale\OrderStatus::getAllStatuses());
-//            var_dump(Sale\OrderStatus::getAllStatusesNames());
-
-//            var_dump($GLOBALS['APPLICATION']->GetCurPageParam());
-//            var_dump($GLOBALS['APPLICATION']->GetCurPageParam());
-
-//            $post = \Bitrix\Main\Application::getInstance()->getContext()->getRequest()->getPostList()->toArray();
-
-
-
-//                \CAdminMessage::ShowMessage([
-//                    "MESSAGE" => Loc::getMessage('TRANZZO Error'),
-//                    "TYPE" => "OK"
-//                ]);
-//                \CAdminMessage::ShowMessage([
-//                        "MESSAGE" => 'TRANZZO Error',
-//                        "TYPE" => "ERROR"
-//                ]);
-
-//                Main\Loader::includeModule(self::MODULE_ID);
 
                 if(!empty($itemsContext)){
                     $items = self::addCustomMenuButton($items, $itemsContext);
@@ -322,14 +265,23 @@ class ListenerTranzzoPayment
         return $config;
     }
 
-    public static function getApiTranzzo()
+    public static function getApiTranzzo($id)
     {
-        $config = self::getSettingsModule();
+        //new
+        $paysystem='PAYSYSTEM_'.$id;
+        $POS_ID = \Bitrix\Sale\BusinessValue::get("POS_ID",$paysystem);
+        $API_KEY = \Bitrix\Sale\BusinessValue::get("API_KEY",$paysystem);
+        $API_SECRET = \Bitrix\Sale\BusinessValue::get("API_SECRET",$paysystem);
+        $ENDPOINTS_KEY = \Bitrix\Sale\BusinessValue::get("ENDPOINTS_KEY",$paysystem);
+
+        PayTranzzo::writeLog(['id' => $paysystem], '', 'after');
+
         return new ApiTranzzo\Payment(
-            $config['POS_ID'],
-            $config['API_KEY'],
-            $config['API_SECRET'],
-            $config['ENDPOINTS_KEY']
+            \Bitrix\Sale\BusinessValue::get("POS_ID",$paysystem),
+        \Bitrix\Sale\BusinessValue::get("API_KEY",$paysystem),
+        \Bitrix\Sale\BusinessValue::get("API_SECRET",$paysystem),
+        \Bitrix\Sale\BusinessValue::get("ENDPOINTS_KEY",$paysystem)
         );
+        //new
     }
 }

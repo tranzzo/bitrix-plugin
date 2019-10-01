@@ -10,3 +10,6 @@ $MESS['TRANZZO.PAYMENT_ACTION'] = "Платежное действие";
 $MESS['TRANZZO.ACTION_AUTH'] = "Авторизация и захват";
 $MESS['TRANZZO.ACTION_PURCHASE'] = "Покупка";
 
+$MESS['TRANZZO.PAYMENT_USER_INFO'] = "Передавать персональные данные пользователя";
+$MESS['TRANZZO.USER_INFO_ON'] = "Да";
+$MESS['TRANZZO.USER_INFO_OFF'] = "Нет";

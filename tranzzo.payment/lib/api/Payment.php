@@ -38,6 +38,11 @@ class Payment
 
     const P_OPT_PAYLOAD = 'payload';
 
+    //new
+    const P_USER_INFO_ON = 'on';
+    const P_USER_INFO_OFF = 'off';
+    //new
+
     const P_REQ_CUSTOMER_ID = 'customer_id';
     const P_REQ_CUSTOMER_EMAIL = 'customer_email';
     const P_REQ_CUSTOMER_FNAME = 'customer_fname';
@@ -318,7 +323,6 @@ class Payment
     {
         $this->params[self::P_REQ_POS_ID] = $this->posId;
         $this->params[self::P_REQ_MODE] = self::P_MODE_HOSTED;
-//        $this->params[self::P_REQ_METHOD] = empty($method)? self::P_METHOD_PURCHASE : self::P_METHOD_AUTH;
         $this->params[self::P_REQ_METHOD] = self::P_METHOD_PURCHASE;
         $this->params[self::P_REQ_ORDER_3DS_BYPASS] = 'supported'; //supported(default) | always | never
 
@@ -481,16 +485,7 @@ class Payment
     {
 
         self::writeLog('', 'parseDataResponse', 'callback');
-//        self::writeLog((array)$toObj, '$toObj', 'callback');
-//
-//        if ($toObj) {
-//            $a = new ResponseParams(json_decode(self::base64url_decode($data), true));
-//            self::writeLog((array)$a, '$a1', 'callback');
-//        } else {
-//            $a = json_decode(self::base64url_decode($data), true);
-//            self::writeLog($a, '$a2', 'callback');
-//        }
-//        return $a;
+
         return $toObj? new ResponseParams(json_decode(self::base64url_decode($data), true))
             : json_decode(self::base64url_decode($data), true);
     }

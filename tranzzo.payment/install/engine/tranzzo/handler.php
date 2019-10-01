@@ -31,26 +31,29 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
         if($payment->getField(PS_STATUS)=='Y')
             return $this->showTemplate($payment, 'template');
-
-        $config = $this->getSettingsModule();
-        $tranzzo = new PayTranzzo(
-            $config['POS_ID'],
-            $config['API_KEY'],
-            $config['API_SECRET'],
-            $config['ENDPOINTS_KEY']
-        );
-
+//new
         $order_params = $this->getParamsBusValue($payment);
 
+        $tranzzo = new PayTranzzo(
+            $order_params['POS_ID'],
+            $order_params['API_KEY'],
+            $order_params['API_SECRET'],
+            $order_params['ENDPOINTS_KEY']
+        );
+//new
         $order_id = (int)$order_params['ORDER_ID'];
         $payment_id = (int)$order_params['PAYMENT_ID'];
 
+        PayTranzzo::writeLog((array)$payment->getSum(), '$payment');
+        PayTranzzo::writeLog((array)$order_params, '$order_params');
         PayTranzzo::writeLog((array)$order_id, '$order_id');
         PayTranzzo::writeLog((array)$payment_id, '$payment_id');
 
         $tranzzo->setOrderId($payment_id);
-        $tranzzo->setAmount($this->getBusinessValue($payment, 'AMOUNT'));
-        $tranzzo->setCurrency($this->getBusinessValue($payment, 'CURRENCY'));
+        //new
+        $tranzzo->setAmount($payment->getSum());
+        $tranzzo->setCurrency($order_params['CURRENCY']);
+        //new
         $tranzzo->setDescription("#{$order_id}");
 
         $scheme = \CMain::IsHTTPS()? 'https' : 'http';
@@ -59,25 +62,30 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
         $order = Sale\Order::load($order_id);
 
-        $USER_ID = $order->getField('USER_ID')? (int)$order->getField('USER_ID') : (int)$order_params['USER_ID'];
-        $tranzzo->setCustomerId($USER_ID);
+        //new
+        if($order_params['PAYMENT_USER_INFO'] == PayTranzzo::P_USER_INFO_ON) {
+            //new
+            $USER_ID = $order->getField('USER_ID') ? (int)$order->getField('USER_ID') : (int)$order_params['USER_ID'];
+            $tranzzo->setCustomerId($USER_ID);
 
-        if($USER->IsAuthorized()) {
-            $tranzzo->setCustomerFirstName($USER->GetFirstName());
-            $tranzzo->setCustomerLastName($USER->GetLastName());
+            if ($USER->IsAuthorized()) {
+                $tranzzo->setCustomerFirstName($USER->GetFirstName());
+                $tranzzo->setCustomerLastName($USER->GetLastName());
 
-            $props = $order->loadPropertyCollection();
-            $tranzzo->setCustomerEmail($props->getUserEmail()->getValue());
-            $tranzzo->setCustomerPhone($props->getPhone()->getValue());
+                $props = $order->loadPropertyCollection();
+                $tranzzo->setCustomerEmail($props->getUserEmail()->getValue());
+                $tranzzo->setCustomerPhone($props->getPhone()->getValue());
+            } else {
+                $tranzzo->setCustomerFirstName($order_params['USER_FNAME']);
+                $tranzzo->setCustomerLastName($order_params['USER_LNAME']);
+
+                $props = $order->loadPropertyCollection();
+                $tranzzo->setCustomerEmail($props->getUserEmail()->getValue());
+                $tranzzo->setCustomerPhone($props->getPhone()->getValue());
+            }
+            //new
         }
-        else{
-            $tranzzo->setCustomerFirstName($order_params['USER_FNAME']);
-            $tranzzo->setCustomerLastName($order_params['USER_LNAME']);
-
-            $props = $order->loadPropertyCollection();
-            $tranzzo->setCustomerEmail($props->getUserEmail()->getValue());
-            $tranzzo->setCustomerPhone($props->getPhone()->getValue());
-        }
+        //new
 
         $tranzzo->setProducts();
         $obBasket = Sale\Basket::getList(array('filter' => array('ORDER_ID' => $order_id )));
@@ -96,7 +104,7 @@ class TranzzoHandler extends PaySystem\ServiceHandler
             $tranzzo->addProduct($infoProduct->get());
         }
 
-        if($config['PAYMENT_ACTION'] == PayTranzzo::P_METHOD_AUTH) {
+        if($order_params['PAYMENT_ACTION'] == PayTranzzo::P_METHOD_AUTH) {
             $response = $tranzzo->createPaymentAuth();
         } else {
             $response = $tranzzo->createPaymentPurchase();
@@ -133,13 +141,16 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
         PayTranzzo::writeLog((array)$response, 'data', 'callback');
 
-        $config = $this->getSettingsModule();
+        //new
+        $order_params = $this->getParamsBusValue($payment);
+
         $tranzzo = new PayTranzzo(
-            $config['POS_ID'],
-            $config['API_KEY'],
-            $config['API_SECRET'],
-            $config['ENDPOINTS_KEY']
+            $order_params['POS_ID'],
+            $order_params['API_KEY'],
+            $order_params['API_SECRET'],
+            $order_params['ENDPOINTS_KEY']
         );
+        //new
 
         $result = new PaySystem\ServiceResult();
         if($tranzzo -> validateSignature($data, $signature) && $payment->getField('PAY_SYSTEM_NAME') == 'TRANZZO') {
@@ -154,10 +165,10 @@ class TranzzoHandler extends PaySystem\ServiceHandler
             if(isset($_GET['refund'])){
                 if($response->getStatus() == PayTranzzo::STATUS_SUCCESS) {
                     $fields = [
-                    'PAY_RETURN_COMMENT' => "2Date refund - " . (new Date())->toString() . "\n"
-                        . "Order id of TRANZZO - " . $response->getOrderId() . "\n"
-                        . "Status - " . $response->getStatus() . "\n"
-                        . "Payment id - " . $response->getPaymentId(),
+                        'PAY_RETURN_COMMENT' => "2Date refund - " . (new Date())->toString() . "\n"
+                            . "Order id of TRANZZO - " . $response->getOrderId() . "\n"
+                            . "Status - " . $response->getStatus() . "\n"
+                            . "Payment id - " . $response->getPaymentId(),
                         'PAY_RETURN_DATE' => new Date(),
                         'IS_RETURN' => 'Y',
                     ];
@@ -186,20 +197,17 @@ class TranzzoHandler extends PaySystem\ServiceHandler
             PayTranzzo::writeLog((array)$amount_payment, '$amount_payment', 'callback');
             PayTranzzo::writeLog((array)$amount_order, '$amount_order', 'callback');
 
-//            if ($response->getResponseCode() == 1000 && ($amount_payment >= $amount_order)) {
             if ($response->getStatusCode() == 1000 && ($amount_payment >= $amount_order)) {
 
                 PayTranzzo::writeLog('status success', '', 'valid');
 
                 $fields = array(
                     "PS_STATUS" => "Y",
-//                    "PS_STATUS_CODE" => $response->getResponseCode(),
                     "PS_STATUS_CODE" => $response->getStatusCode(),
                     "PS_STATUS_MESSAGE" => $response->getStatus(),
                     "PS_STATUS_DESCRIPTION" => $response->getStatusDescription(),
                     "PS_SUM" => $amount_payment,
                     "PS_CURRENCY" => $response->getCurrency(),
-//                    "PS_INVOICE_ID" => $response->getOrderId(),
                     "PS_INVOICE_ID" => $response->getBillOrderId(),
                     "PAY_VOUCHER_DATE" => new Date(),
                     "PS_RESPONSE_DATE" => new DateTime(),
@@ -214,22 +222,17 @@ class TranzzoHandler extends PaySystem\ServiceHandler
                 $result->setPsData($fields);
                 $result->setOperationType(PaySystem\ServiceResult::MONEY_COMING);
             }
-//            elseif ($response->getResponseCode() == 1002 && ($amount_payment >= $amount_order)) {
             elseif ($response->getStatusCode() == 1002 && ($amount_payment >= $amount_order)) {
 
-                //__('The authorized amount is %1.', $formatedPrice)
                 PayTranzzo::writeLog('status auth success', '', 'valid');
 
                 $fields = array(
                     "PS_STATUS" => "Y",
-//                    "PS_STATUS_CODE" => $response->getResponseCode(),
                     "PS_STATUS_CODE" => $response->getStatusCode(),
                     "PS_STATUS_MESSAGE" => $response->getStatus(),
-                    //"PS_STATUS_DESCRIPTION" => $response->getStatusDescription(),
                     "PS_STATUS_DESCRIPTION" => $response->getResponseDescription(),
                     "PS_SUM" => $amount_payment,
                     "PS_CURRENCY" => $response->getCurrency(),
-//                    "PS_INVOICE_ID" => $response->getOrderId(),
                     "PS_INVOICE_ID" => $response->getBillOrderId(),
                     "PAY_VOUCHER_DATE" => NULL,
                     "PS_RESPONSE_DATE" => new DateTime(),
@@ -250,7 +253,6 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
                 $fields = array(
                     "PS_STATUS" => "N",
-//                    "PS_STATUS_CODE" => $response->getResponseCode(),
                     "PS_STATUS_CODE" => $response->getStatusCode(),
                     "PS_STATUS_MESSAGE" => $response->getStatus(),
                     "PS_STATUS_DESCRIPTION" => $response->getResponseDescription(),
@@ -294,23 +296,9 @@ class TranzzoHandler extends PaySystem\ServiceHandler
 
         $data_response = PayTranzzo::parseDataResponse($request->get('data'), 1);
 
-//        $payment_id = (int)$data_response->getProvOrderId();
         $payment_id = (int)$data_response->getOrderId();
         PayTranzzo::writeLog($payment_id, '$payment_id', 'callback');
 
         return $payment_id;
-    }
-
-    public function getSettingsModule()
-    {
-        $config = \Bitrix\Main\Config\Option::getForModule(self::MODULE_ID);
-
-        if(is_array($config)){
-            foreach ($config as $item => $value) {
-                $this->{$item} = trim($value);
-            }
-        }
-
-        return $config;
     }
 }
