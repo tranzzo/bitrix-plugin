@@ -14,7 +14,8 @@ class ResponseParams
 	const METHOD = 'method';
 
 	//provider_order_id - order_id in store
-	const PROVIDER_ORDER_ID = 'provider_order_id';
+//	const PROVIDER_ORDER_ID = 'provider_order_id';
+	const PROVIDER_ORDER_ID = 'order_id';
 
 	const OPERATION_ID = 'operation_id';//Unique Tranzzo capture identifier
 
